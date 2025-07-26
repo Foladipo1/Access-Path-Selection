@@ -17,6 +17,15 @@ FilterPropagateResult StructFilter::CheckStatistics(BaseStatistics &stats) {
 	return child_filter->CheckStatistics(child_stats);
 }
 
+FilterPropagateResult StructFilter::CheckSketchStatistics(BaseStatistics &stats, idx_t index,
+														  std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+														  std::vector<ManagedSelection> &vector_sels) {
+	D_ASSERT(stats.GetType().id() == LogicalTypeId::STRUCT);
+	// Check the child statistics
+	auto &child_stats = StructStats::GetChildStats(stats, child_idx);
+	return child_filter->CheckSketchStatistics(child_stats, index, segment_sketches, vector_sels);
+}
+
 string StructFilter::ToString(const string &column_name) {
 	return child_filter->ToString(column_name + "." + child_name);
 }

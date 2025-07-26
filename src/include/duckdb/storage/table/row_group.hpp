@@ -106,6 +106,7 @@ public:
 	//! Checks the given set of table filters against the per-segment statistics. Returns false if any segments were
 	//! skipped.
 	bool CheckZonemapSegments(CollectionScanState &state);
+	bool CheckSketchSegments(CollectionScanState &state);
 	void Scan(TransactionData transaction, CollectionScanState &state, DataChunk &result);
 	void ScanCommitted(CollectionScanState &state, DataChunk &result, TableScanType type);
 

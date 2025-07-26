@@ -30,6 +30,12 @@ bool ArrayColumnData::CheckZonemap(ColumnScanState &state, TableFilter &filter) 
 	return false;
 }
 
+bool ArrayColumnData::CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) {
+	// FIXME: There is nothing preventing us from supporting this, but it's not implemented yet.
+	// table filters are not supported yet for fixed size list columns
+	return false;
+}
+
 void ArrayColumnData::InitializeScan(ColumnScanState &state) {
 	// initialize the validity segment
 	D_ASSERT(state.child_states.size() == 2);

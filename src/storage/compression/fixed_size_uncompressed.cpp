@@ -240,7 +240,7 @@ idx_t FixedSizeAppend(CompressionAppendState &append_state, ColumnSegment &segme
 	idx_t max_tuple_count = segment.SegmentSize() / sizeof(T);
 	idx_t copy_count = MinValue<idx_t>(count, max_tuple_count - segment.count);
 
-	OP::template Append<T>(stats, target_ptr, segment.count, data, offset, copy_count);
+	OP::template Append<T>(stats, target_ptr, segment.count, data, offset, copy_count);					
 	segment.count += copy_count;
 	return copy_count;
 }

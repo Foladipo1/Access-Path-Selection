@@ -60,6 +60,27 @@ bool StandardColumnData::CheckZonemap(ColumnScanState &state, TableFilter &filte
 	}
 }
 
+bool StandardColumnData::CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) {
+	if (is_sketched) {
+		if (!state.current) {
+			return true;
+		}
+		FilterPropagateResult prune_result;
+		{
+			lock_guard<mutex> l(stats_lock);
+			prune_result = filter.CheckSketchStatistics(state.current->stats.statistics, index, segment_sketches, vector_sels);
+			if (prune_result != FilterPropagateResult::FILTER_ALWAYS_FALSE) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}	
+	} else {
+		return true;
+	}
+}
+
 void StandardColumnData::InitializeScan(ColumnScanState &state) {
 	ColumnData::InitializeScan(state);
 

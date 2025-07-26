@@ -31,6 +31,21 @@ FilterPropagateResult ConstantFilter::CheckStatistics(BaseStatistics &stats) {
 	}
 }
 
+FilterPropagateResult ConstantFilter::CheckSketchStatistics(BaseStatistics &stats, idx_t index,
+														    std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+															std::vector<ManagedSelection> &vector_sels) {
+	D_ASSERT(constant.type().id() == stats.GetType().id());
+	switch (constant.type().InternalType()) {
+	case PhysicalType::UINT32:
+	case PhysicalType::UINT64:
+	case PhysicalType::INT32:
+	case PhysicalType::INT64:
+		return NumericStats::CheckSketch(stats, comparison_type, constant, index, segment_sketches, vector_sels);
+	default:
+		return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+	}
+}
+
 string ConstantFilter::ToString(const string &column_name) {
 	return column_name + ExpressionTypeToOperator(comparison_type) + constant.ToSQLString();
 }

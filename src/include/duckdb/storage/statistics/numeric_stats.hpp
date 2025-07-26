@@ -13,6 +13,8 @@
 #include "duckdb/common/enums/expression_type.hpp"
 #include "duckdb/common/operator/comparison_operators.hpp"
 #include "duckdb/common/types/value.hpp"
+#include "duckdb/storage/statistics/column_sketch.hpp"
+#include "duckdb/common/types/selection_vector.hpp"
 
 namespace duckdb {
 class BaseStatistics;
@@ -56,6 +58,11 @@ struct NumericStats {
 	//! Check whether or not a given comparison with a constant could possibly be satisfied by rows given the statistics
 	DUCKDB_API static FilterPropagateResult CheckZonemap(const BaseStatistics &stats, ExpressionType comparison_type,
 	                                                     const Value &constant);
+	
+	DUCKDB_API static FilterPropagateResult CheckSketch(const BaseStatistics &stats, ExpressionType comparison_type,
+	                                                    const Value &constant, idx_t index,
+														std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+														std::vector<ManagedSelection> &vector_sels);
 
 	DUCKDB_API static void Merge(BaseStatistics &stats, const BaseStatistics &other_p);
 

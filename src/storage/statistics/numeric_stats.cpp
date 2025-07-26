@@ -225,6 +225,96 @@ FilterPropagateResult CheckZonemapTemplated(const BaseStatistics &stats, Express
 	}
 }
 
+template <class T>
+FilterPropagateResult CheckSketchTemplated(const BaseStatistics &stats, ExpressionType comparison_type,
+										   const Value &constant_value, idx_t index,
+										   const std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+										   std::vector<ManagedSelection> &vector_sels) {
+	D_ASSERT(!segment_sketches.empty());
+	using SignedT = std::make_signed_t<T>;							
+	SignedT signed_val = constant_value.GetValueUnsafe<SignedT>();
+	T constant = static_cast<T>(signed_val);	
+
+	auto *sketch = dynamic_cast<ColumnSketchWrapper<T, uint8_t>*>(segment_sketches[index].get());
+	ManagedSelection &sel = vector_sels[index];
+
+	if (sketch) {
+		const auto &base_data = sketch->impl.GetBaseData();
+		switch (comparison_type) {
+			case ExpressionType::COMPARE_EQUAL: {
+
+				return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+			}
+			case ExpressionType::COMPARE_NOTEQUAL: {
+
+				return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+			}
+			case ExpressionType::COMPARE_GREATERTHANOREQUALTO: {
+				auto result = sketch->impl.evaluate_greaterthan_orequal_avx512(constant, sel);
+				if (result) {
+					if (result == base_data.size()) {
+						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+					}
+					else {
+						return FilterPropagateResult::NO_PRUNING_POSSIBLE; 
+					}
+				}
+				else {
+					return FilterPropagateResult::FILTER_ALWAYS_FALSE; 
+				}
+			}
+			case ExpressionType::COMPARE_GREATERTHAN: {
+				auto result = sketch->impl.evaluate_greater_than_CPU(constant);
+				if (!result.empty()) {
+					if (result.size() == base_data.size()) {
+						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+					}
+					else {
+						return FilterPropagateResult::NO_PRUNING_POSSIBLE; 
+					}
+				}
+				else {
+					return FilterPropagateResult::FILTER_ALWAYS_FALSE; 
+				}
+			}
+			case ExpressionType::COMPARE_LESSTHANOREQUALTO: {
+				auto result = sketch->impl.evaluate_lessthan_orequal_avx512(constant, sel);
+				if (result) {
+					if (result == base_data.size()) {
+						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+					}
+					else {
+						return FilterPropagateResult::NO_PRUNING_POSSIBLE; 
+					}
+				}
+				else {
+					return FilterPropagateResult::FILTER_ALWAYS_FALSE; 
+				}
+			}
+			case ExpressionType::COMPARE_LESSTHAN: {
+				auto result = sketch->impl.evaluate_less_than_AVX512(constant, sel);
+				if (result) {
+					if (result == base_data.size()) {
+						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+					}
+					else {
+						return FilterPropagateResult::NO_PRUNING_POSSIBLE; 
+					}
+				}
+				else {
+					return FilterPropagateResult::FILTER_ALWAYS_FALSE; 
+				}
+			}
+			default: {
+				throw InternalException("Expression type in zonemap check not implemented");
+			}
+		}
+	} else {
+		std::cout << "sketch type not matched or not implemented for this T" << std::endl;
+		return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+	}										
+}
+
 FilterPropagateResult NumericStats::CheckZonemap(const BaseStatistics &stats, ExpressionType comparison_type,
                                                  const Value &constant) {
 	D_ASSERT(constant.type() == stats.GetType());
@@ -261,6 +351,26 @@ FilterPropagateResult NumericStats::CheckZonemap(const BaseStatistics &stats, Ex
 		return CheckZonemapTemplated<double>(stats, comparison_type, constant);
 	default:
 		throw InternalException("Unsupported type for NumericStats::CheckZonemap");
+	}
+}
+
+FilterPropagateResult NumericStats::CheckSketch(const BaseStatistics &stats, ExpressionType comparison_type,const Value &constant,
+												idx_t index, std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+												std::vector<ManagedSelection> &vector_sels) {
+	D_ASSERT(constant.type() == stats.GetType());
+	if (constant.IsNull()) {
+		return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+	}
+
+	switch (stats.GetType().InternalType()) {
+	case PhysicalType::INT32:
+	case PhysicalType::UINT32:
+		return CheckSketchTemplated<uint32_t>(stats, comparison_type, constant, index, segment_sketches, vector_sels);
+	case PhysicalType::INT64:
+	case PhysicalType::UINT64:
+		return CheckSketchTemplated<uint64_t>(stats, comparison_type, constant, index, segment_sketches, vector_sels);
+	default:
+	throw InternalException("Unsupported type for NumericStats::CheckSketch");
 	}
 }
 

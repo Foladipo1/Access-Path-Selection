@@ -66,8 +66,12 @@ public:
 	//! The parent column (if any)
 	optional_ptr<ColumnData> parent;
 
+	std::vector<std::shared_ptr<BaseColumnSketch>> segment_sketches;
+	bool is_sketched = false;
+	std::vector<ManagedSelection> vector_sels;
 public:
 	virtual bool CheckZonemap(ColumnScanState &state, TableFilter &filter) = 0;
+	virtual bool CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) = 0;
 
 	BlockManager &GetBlockManager() {
 		return block_manager;

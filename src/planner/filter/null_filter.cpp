@@ -18,6 +18,20 @@ FilterPropagateResult IsNullFilter::CheckStatistics(BaseStatistics &stats) {
 	return FilterPropagateResult::NO_PRUNING_POSSIBLE;
 }
 
+FilterPropagateResult IsNullFilter::CheckSketchStatistics(BaseStatistics &stats, idx_t index,
+														  std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+														  std::vector<ManagedSelection> &vector_sels) {
+	if (!stats.CanHaveNull()) {
+		// no null values are possible: always false
+		return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+	}
+	if (!stats.CanHaveNoNull()) {
+		// no non-null values are possible: always true
+		return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+	}
+	return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+}
+
 string IsNullFilter::ToString(const string &column_name) {
 	return column_name + "IS NULL";
 }
@@ -26,6 +40,20 @@ IsNotNullFilter::IsNotNullFilter() : TableFilter(TableFilterType::IS_NOT_NULL) {
 }
 
 FilterPropagateResult IsNotNullFilter::CheckStatistics(BaseStatistics &stats) {
+	if (!stats.CanHaveNoNull()) {
+		// no non-null values are possible: always false
+		return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+	}
+	if (!stats.CanHaveNull()) {
+		// no null values are possible: always true
+		return FilterPropagateResult::FILTER_ALWAYS_TRUE;
+	}
+	return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+}
+
+FilterPropagateResult IsNotNullFilter::CheckSketchStatistics(BaseStatistics &stats, idx_t index,
+															 std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+															 std::vector<ManagedSelection> &vector_sels) {
 	if (!stats.CanHaveNoNull()) {
 		// no non-null values are possible: always false
 		return FilterPropagateResult::FILTER_ALWAYS_FALSE;

@@ -200,6 +200,47 @@ public:
 		return sel_vec;
 	}
 
+	inline void SetCount(idx_t new_count) {
+		count = new_count;
+	}
+	
+	void BitmaskToSelection() {
+        idx_t cnt = 0;
+        sel_vec.Initialize(size);
+        for (size_t i = 0; i < bitmask.size(); ++i) {
+            uint64_t mask = bitmask[i];
+            for (int b = 0; b < 64; ++b) {
+                if (mask & (1ULL << b)) {
+                    sel_vec.set_index(cnt++, i * 64 + b);
+                }
+            }
+        }
+        count = cnt;
+    }
+
+	void MergeSelections(const ManagedSelection &other_msel) {
+        const SelectionVector &other_sel = other_msel.Selection();
+		idx_t other_count = other_msel.Count();
+		idx_t new_count = 0;
+		idx_t i = 0, j = 0;
+
+		while (i < count && j < other_count) {
+			idx_t v1 = sel_vec.get_index(i);
+			idx_t v2 = other_sel.get_index(j);
+			if (v1 == v2) {
+				sel_vec.set_index(new_count++, v1);
+				++i; ++j;
+			} else if (v1 < v2) {
+				++i;
+			} else {
+				++j;
+			}
+		}
+		count = new_count;
+    }
+	std::vector<uint64_t> bitmask;
+
+
 private:
 	bool initialized = false;
 	idx_t count;

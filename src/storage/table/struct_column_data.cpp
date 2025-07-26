@@ -64,6 +64,10 @@ bool StructColumnData::CheckZonemap(ColumnScanState &state, TableFilter &filter)
 	}
 }
 
+bool StructColumnData::CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) {
+	return false;
+}
+
 idx_t StructColumnData::GetMaxEntry() {
 	return sub_columns[0]->GetMaxEntry();
 }

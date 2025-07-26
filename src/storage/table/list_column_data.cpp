@@ -29,6 +29,11 @@ bool ListColumnData::CheckZonemap(ColumnScanState &state, TableFilter &filter) {
 	return false;
 }
 
+bool ListColumnData::CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) {
+	// table filters are not supported yet for list columns
+	return false;
+}
+
 void ListColumnData::InitializeScan(ColumnScanState &state) {
 	ColumnData::InitializeScan(state);
 

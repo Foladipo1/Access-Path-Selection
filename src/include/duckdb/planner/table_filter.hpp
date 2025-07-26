@@ -12,6 +12,8 @@
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/unordered_map.hpp"
 #include "duckdb/common/enums/filter_propagate_result.hpp"
+#include "duckdb/storage/statistics/column_sketch.hpp"
+#include "duckdb/common/types/selection_vector.hpp"
 
 namespace duckdb {
 class BaseStatistics;
@@ -38,6 +40,8 @@ public:
 public:
 	//! Returns true if the statistics indicate that the segment can contain values that satisfy that filter
 	virtual FilterPropagateResult CheckStatistics(BaseStatistics &stats) = 0;
+	virtual FilterPropagateResult CheckSketchStatistics(BaseStatistics &stats, idx_t index, std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+														std::vector<ManagedSelection> &vector_sels) = 0;
 	virtual string ToString(const string &column_name) = 0;
 	virtual bool Equals(const TableFilter &other) const {
 		return filter_type != other.filter_type;

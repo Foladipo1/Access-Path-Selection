@@ -444,6 +444,47 @@ bool RowGroup::CheckZonemapSegments(CollectionScanState &state) {
 	return true;
 }
 
+bool RowGroup::CheckSketchSegments(CollectionScanState &state) {
+	auto &column_ids = state.GetColumnIds();
+	auto filters = state.GetFilters();
+	if (!filters) {
+		return true;
+	}
+	for (auto &entry : filters->filters) {
+		D_ASSERT(entry.first < column_ids.size());
+		auto column_idx = entry.first;
+		const auto &base_column_idx = column_ids[column_idx];
+		bool read_segment = GetColumn(base_column_idx).CheckSketch(state.column_scans[column_idx], *entry.second, state.vector_index);
+		if (!read_segment) {
+			
+			idx_t target_row = GetFilterScanCount(state.column_scans[column_idx], *entry.second);
+			if (target_row >= state.max_row) {
+				target_row = state.max_row;
+			}
+
+			D_ASSERT(target_row >= this->start);
+			D_ASSERT(target_row <= this->start + this->count);
+			idx_t target_vector_index = (target_row - this->start) / STANDARD_VECTOR_SIZE;
+			if (state.vector_index == target_vector_index) {
+				// we can't skip any full vectors because this segment contains less than a full vector
+				// for now we just bail-out
+				// FIXME: we could check if we can ALSO skip the next segments, in which case skipping a full vector
+				// might be possible
+				// we don't care that much though, since a single segment that fits less than a full vector is
+				// exceedingly rare
+				return true;
+			}
+			if (state.vector_index < target_vector_index) {
+				NextVector(state);
+			}
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
 template <TableScanType TYPE>
 void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &state, DataChunk &result) {
 	const bool ALLOW_UPDATES = TYPE != TableScanType::TABLE_SCAN_COMMITTED_ROWS_DISALLOW_UPDATES &&
@@ -460,7 +501,7 @@ void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &s
 		auto max_count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.max_row_group_row - current_row);
 
 		//! first check the zonemap if we have to scan this partition
-		if (!CheckZonemapSegments(state)) {
+		if (!CheckSketchSegments(state)) {
 			continue;
 		}
 		// second, scan the version chunk manager to figure out which tuples to load for this transaction
@@ -511,6 +552,8 @@ void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &s
 			} else {
 				sel.Initialize(nullptr);
 			}
+			ManagedSelection msel(count);
+
 			//! first, we scan the columns with filters, fetch their data and generate a selection vector.
 			//! get runtime statistics
 			auto start_time = high_resolution_clock::now();
@@ -521,8 +564,36 @@ void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &s
 					auto tf_idx = adaptive_filter->permutation[i];
 					auto col_idx = column_ids[tf_idx];
 					auto &col_data = GetColumn(col_idx);
-					col_data.Select(transaction, state.vector_index, state.column_scans[tf_idx], result.data[tf_idx],
-					                sel, approved_tuple_count, *table_filters->filters[tf_idx]);
+					if(col_data.is_sketched) {
+						col_data.Scan(transaction, state.vector_index, state.column_scans[tf_idx], result.data[tf_idx]);
+						if(i == 0){
+							msel.bitmask = col_data.vector_sels[state.vector_index].bitmask;
+						}
+						else {
+							auto &other_mask = col_data.vector_sels[state.vector_index].bitmask;
+							for (size_t j = 0; j < msel.bitmask.size(); ++j) {
+								msel.bitmask[j] &= other_mask[j];
+							}
+						}
+						
+						if (i == table_filters->filters.size() - 1) {
+							if(i == 0){
+								sel.Initialize(col_data.vector_sels[state.vector_index].Selection());
+								approved_tuple_count = col_data.vector_sels[state.vector_index].Count();
+							}
+							else {
+								msel.BitmaskToSelection();
+								sel.Initialize(msel.Selection());
+								approved_tuple_count = msel.Count();
+							}
+							
+						}					
+					}
+					else {
+						col_data.Select(transaction, state.vector_index, state.column_scans[tf_idx], result.data[tf_idx],
+							sel, approved_tuple_count, *table_filters->filters[tf_idx]);
+					}
+					
 				}
 				for (auto &table_filter : table_filters->filters) {
 					result.data[table_filter.first].Slice(sel, approved_tuple_count);
@@ -740,6 +811,50 @@ void RowGroup::Append(RowGroupAppendState &state, DataChunk &chunk, idx_t append
 		auto &col_data = GetColumn(i);
 		auto prev_allocation_size = col_data.GetAllocationSize();
 		col_data.Append(state.states[i], chunk.data[i], append_count);
+
+		UnifiedVectorFormat data;
+		chunk.data[i].ToUnifiedFormat(append_count, data);
+		switch (col_data.type.InternalType()) {
+			case PhysicalType::INT32:
+			case PhysicalType::UINT32: {
+				auto sdata = UnifiedVectorFormat::GetData<int32_t>(data);
+				std::vector<uint32_t> all_data;
+				for (idx_t i = 0; i < append_count; ++i) {
+					all_data.push_back(static_cast<uint32_t>(sdata[i]));
+				}
+				auto sketch = std::make_shared<ColumnSketchWrapper<uint32_t, uint8_t>>(all_data);
+				if (sketch) {
+					col_data.segment_sketches.push_back(sketch->Copy());
+					ManagedSelection msel(append_count);
+					msel.Selection().Initialize(nullptr);
+					msel.SetCount(append_count);
+					col_data.vector_sels.push_back(msel);
+					col_data.is_sketched = true;
+				}
+				break;
+			}
+			case PhysicalType::INT64:
+			case PhysicalType::UINT64: {
+				auto sdata = UnifiedVectorFormat::GetData<int64_t>(data);
+				std::vector<uint64_t> all_data;
+				for (idx_t i = 0; i < append_count; ++i) {
+					all_data.push_back(static_cast<uint64_t>(sdata[i]));
+				}
+				auto sketch = std::make_shared<ColumnSketchWrapper<uint64_t, uint8_t>>(all_data);
+				if (sketch) {
+					col_data.segment_sketches.push_back(sketch->Copy());
+					ManagedSelection msel(append_count);
+					msel.Selection().Initialize(nullptr);
+					msel.SetCount(append_count);
+					col_data.vector_sels.push_back(msel);
+					col_data.is_sketched = true;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+
 		allocation_size += col_data.GetAllocationSize() - prev_allocation_size;
 	}
 	state.offset_in_row_group += append_count;

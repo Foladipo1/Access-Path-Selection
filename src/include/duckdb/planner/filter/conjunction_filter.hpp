@@ -10,6 +10,7 @@
 
 #include "duckdb/planner/table_filter.hpp"
 #include "duckdb/common/vector.hpp"
+#include "duckdb/common/types/selection_vector.hpp"
 
 namespace duckdb {
 class ConjunctionFilter : public TableFilter {
@@ -38,6 +39,8 @@ public:
 
 public:
 	FilterPropagateResult CheckStatistics(BaseStatistics &stats) override;
+	FilterPropagateResult CheckSketchStatistics(BaseStatistics &stats, idx_t index, std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+												std::vector<ManagedSelection> &vector_sels) override;
 	string ToString(const string &column_name) override;
 	bool Equals(const TableFilter &other) const override;
 	void Serialize(Serializer &serializer) const override;
@@ -53,6 +56,8 @@ public:
 
 public:
 	FilterPropagateResult CheckStatistics(BaseStatistics &stats) override;
+	FilterPropagateResult CheckSketchStatistics(BaseStatistics &stats, idx_t index, std::vector<std::shared_ptr<BaseColumnSketch>> &segment_sketches,
+												std::vector<ManagedSelection> &vector_sels) override;
 	string ToString(const string &column_name) override;
 	bool Equals(const TableFilter &other) const override;
 	void Serialize(Serializer &serializer) const override;

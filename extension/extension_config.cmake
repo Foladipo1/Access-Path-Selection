@@ -9,7 +9,7 @@
 
 # Parquet is loaded by default on every build as its a essential part of DuckDB
 duckdb_extension_load(parquet)
-
+duckdb_extension_load(tpch)
 # The Linux allocator has issues so we use jemalloc, but only on x86 because page sizes are fixed at 4KB.
 # If page sizes vary for an architecture (e.g., arm64), we cannot create a portable binary due to jemalloc config
 if(OS_NAME STREQUAL "linux" AND (OS_ARCH STREQUAL "amd64" OR OS_ARCH STREQUAL "i386") AND NOT WASM_LOADABLE_EXTENSIONS AND NOT CLANG_TIDY AND NOT ANDROID AND NOT ZOS)

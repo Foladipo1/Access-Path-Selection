@@ -27,6 +27,7 @@ public:
 public:
 	void SetStart(idx_t new_start) override;
 	bool CheckZonemap(ColumnScanState &state, TableFilter &filter) override;
+	bool CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) override;
 	idx_t GetMaxEntry() override;
 
 	void InitializeScan(ColumnScanState &state) override;

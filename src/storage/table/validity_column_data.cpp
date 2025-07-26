@@ -13,6 +13,10 @@ bool ValidityColumnData::CheckZonemap(ColumnScanState &state, TableFilter &filte
 	return true;
 }
 
+bool ValidityColumnData::CheckSketch(ColumnScanState &state, TableFilter &filter, idx_t index) {
+	return true;
+}
+
 void ValidityColumnData::AppendData(BaseStatistics &stats, ColumnAppendState &state, UnifiedVectorFormat &vdata,
                                     idx_t count) {
 	lock_guard<mutex> l(stats_lock);
