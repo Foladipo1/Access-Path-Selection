@@ -250,7 +250,7 @@ FilterPropagateResult CheckSketchTemplated(const BaseStatistics &stats, Expressi
 				return FilterPropagateResult::NO_PRUNING_POSSIBLE;
 			}
 			case ExpressionType::COMPARE_GREATERTHANOREQUALTO: {
-				auto result = sketch->impl.evaluate_greaterthan_orequal_avx512(constant, sel);
+				auto result = sketch->impl.evaluate_greater_than_AVX512(constant - 1, sel);
 				if (result) {
 					if (result == base_data.size()) {
 						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
@@ -264,9 +264,9 @@ FilterPropagateResult CheckSketchTemplated(const BaseStatistics &stats, Expressi
 				}
 			}
 			case ExpressionType::COMPARE_GREATERTHAN: {
-				auto result = sketch->impl.evaluate_greater_than_CPU(constant);
-				if (!result.empty()) {
-					if (result.size() == base_data.size()) {
+				auto result = sketch->impl.evaluate_greater_than_AVX512(constant, sel);
+				if (result) {
+					if (result == base_data.size()) {
 						return FilterPropagateResult::FILTER_ALWAYS_TRUE;
 					}
 					else {
@@ -278,7 +278,7 @@ FilterPropagateResult CheckSketchTemplated(const BaseStatistics &stats, Expressi
 				}
 			}
 			case ExpressionType::COMPARE_LESSTHANOREQUALTO: {
-				auto result = sketch->impl.evaluate_lessthan_orequal_avx512(constant, sel);
+				auto result = sketch->impl.evaluate_less_than_AVX512(constant + 1, sel);
 				if (result) {
 					if (result == base_data.size()) {
 						return FilterPropagateResult::FILTER_ALWAYS_TRUE;

@@ -218,29 +218,8 @@ public:
         count = cnt;
     }
 
-	void MergeSelections(const ManagedSelection &other_msel) {
-        const SelectionVector &other_sel = other_msel.Selection();
-		idx_t other_count = other_msel.Count();
-		idx_t new_count = 0;
-		idx_t i = 0, j = 0;
-
-		while (i < count && j < other_count) {
-			idx_t v1 = sel_vec.get_index(i);
-			idx_t v2 = other_sel.get_index(j);
-			if (v1 == v2) {
-				sel_vec.set_index(new_count++, v1);
-				++i; ++j;
-			} else if (v1 < v2) {
-				++i;
-			} else {
-				++j;
-			}
-		}
-		count = new_count;
-    }
 	std::vector<uint64_t> bitmask;
-
-
+	
 private:
 	bool initialized = false;
 	idx_t count;

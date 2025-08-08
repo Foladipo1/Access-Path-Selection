@@ -500,8 +500,22 @@ void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &s
 		idx_t current_row = state.vector_index * STANDARD_VECTOR_SIZE;
 		auto max_count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.max_row_group_row - current_row);
 
+		bool can_sketch = true;
 		//! first check the zonemap if we have to scan this partition
-		if (!CheckSketchSegments(state)) {
+		for (idx_t i = 0; i < column_ids.size(); i++) {
+			const auto &column = column_ids[i];
+			auto &col_data = GetColumn(column);
+			if(!col_data.is_sketched) {
+				can_sketch = false;
+				break;
+			}
+		}
+		bool check_result;
+		if (can_sketch) 
+			check_result = CheckSketchSegments(state);
+		else
+			check_result = CheckZonemapSegments(state);
+		if (!check_result) {
 			continue;
 		}
 		// second, scan the version chunk manager to figure out which tuples to load for this transaction
@@ -564,7 +578,7 @@ void RowGroup::TemplatedScan(TransactionData transaction, CollectionScanState &s
 					auto tf_idx = adaptive_filter->permutation[i];
 					auto col_idx = column_ids[tf_idx];
 					auto &col_data = GetColumn(col_idx);
-					if(col_data.is_sketched) {
+					if(can_sketch) {
 						col_data.Scan(transaction, state.vector_index, state.column_scans[tf_idx], result.data[tf_idx]);
 						if(i == 0){
 							msel.bitmask = col_data.vector_sels[state.vector_index].bitmask;
