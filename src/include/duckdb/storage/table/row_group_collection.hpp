@@ -74,6 +74,9 @@ public:
 	void InitializeAppend(TransactionData transaction, TableAppendState &state);
 	//! Appends to the row group collection. Returns true if a new row group has been created to append to
 	bool Append(DataChunk &chunk, TableAppendState &state);
+
+	bool sketchAppend(DataChunk &chunk, TableAppendState &state, vector<int> &sketch_col_idxs);
+
 	//! FinalizeAppend flushes an append with a variable number of rows.
 	void FinalizeAppend(TransactionData transaction, TableAppendState &state);
 	void CommitAppend(transaction_t commit_id, idx_t row_start, idx_t count);

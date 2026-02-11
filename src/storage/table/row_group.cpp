@@ -826,48 +826,67 @@ void RowGroup::Append(RowGroupAppendState &state, DataChunk &chunk, idx_t append
 		auto prev_allocation_size = col_data.GetAllocationSize();
 		col_data.Append(state.states[i], chunk.data[i], append_count);
 
-		UnifiedVectorFormat data;
-		chunk.data[i].ToUnifiedFormat(append_count, data);
-		switch (col_data.type.InternalType()) {
-			case PhysicalType::INT32:
-			case PhysicalType::UINT32: {
-				auto sdata = UnifiedVectorFormat::GetData<int32_t>(data);
-				std::vector<uint32_t> all_data;
-				for (idx_t i = 0; i < append_count; ++i) {
-					all_data.push_back(static_cast<uint32_t>(sdata[i]));
+		allocation_size += col_data.GetAllocationSize() - prev_allocation_size;
+	}
+	state.offset_in_row_group += append_count;
+}
+
+void RowGroup::sketchAppend(RowGroupAppendState &state, DataChunk &chunk, idx_t append_count, vector<int> &sketch_col_idxs) {
+	// append to the current row_group
+	D_ASSERT(chunk.ColumnCount() == GetColumnCount());
+	int sketch_idx = 0;
+	for (idx_t i = 0; i < GetColumnCount(); i++) {
+		auto &col_data = GetColumn(i);
+		auto prev_allocation_size = col_data.GetAllocationSize();
+		col_data.Append(state.states[i], chunk.data[i], append_count);
+
+		D_ASSERT(sketch_col_idxs.size() > 0);
+		if (sketch_idx < sketch_col_idxs.size() && i == sketch_col_idxs[sketch_idx]) {
+			sketch_idx++;
+			UnifiedVectorFormat data;
+			chunk.data[i].ToUnifiedFormat(append_count, data);
+			switch (col_data.type.InternalType()) {
+				case PhysicalType::INT32:
+				case PhysicalType::UINT32: {
+					auto sdata = UnifiedVectorFormat::GetData<int32_t>(data);
+					std::vector<uint32_t> all_data;
+					for (idx_t i = 0; i < append_count; ++i) {
+						all_data.push_back(static_cast<uint32_t>(sdata[i]));
+					}
+					auto sketch = std::make_shared<ColumnSketchWrapper<uint32_t, uint8_t>>(all_data);
+					if (sketch) {
+						col_data.segment_sketches.push_back(sketch->Copy());
+						ManagedSelection msel(append_count);
+						msel.Selection().Initialize(nullptr);
+						msel.SetCount(append_count);
+						col_data.vector_sels.push_back(msel);
+						col_data.is_sketched = true;
+					}
+					break;
 				}
-				auto sketch = std::make_shared<ColumnSketchWrapper<uint32_t, uint8_t>>(all_data);
-				if (sketch) {
-					col_data.segment_sketches.push_back(sketch->Copy());
-					ManagedSelection msel(append_count);
-					msel.Selection().Initialize(nullptr);
-					msel.SetCount(append_count);
-					col_data.vector_sels.push_back(msel);
-					col_data.is_sketched = true;
+				case PhysicalType::INT64:
+				case PhysicalType::UINT64: {
+					auto sdata = UnifiedVectorFormat::GetData<int64_t>(data);
+					std::vector<uint64_t> all_data;
+					for (idx_t i = 0; i < append_count; ++i) {
+						all_data.push_back(static_cast<uint64_t>(sdata[i]));
+					}
+					auto sketch = std::make_shared<ColumnSketchWrapper<uint64_t, uint8_t>>(all_data);
+					if (sketch) {
+						col_data.segment_sketches.push_back(sketch->Copy());
+						ManagedSelection msel(append_count);
+						msel.Selection().Initialize(nullptr);
+						msel.SetCount(append_count);
+						col_data.vector_sels.push_back(msel);
+						col_data.is_sketched = true;
+					}
+					break;
 				}
-				break;
+				default:
+					break;
 			}
-			case PhysicalType::INT64:
-			case PhysicalType::UINT64: {
-				auto sdata = UnifiedVectorFormat::GetData<int64_t>(data);
-				std::vector<uint64_t> all_data;
-				for (idx_t i = 0; i < append_count; ++i) {
-					all_data.push_back(static_cast<uint64_t>(sdata[i]));
-				}
-				auto sketch = std::make_shared<ColumnSketchWrapper<uint64_t, uint8_t>>(all_data);
-				if (sketch) {
-					col_data.segment_sketches.push_back(sketch->Copy());
-					ManagedSelection msel(append_count);
-					msel.Selection().Initialize(nullptr);
-					msel.SetCount(append_count);
-					col_data.vector_sels.push_back(msel);
-					col_data.is_sketched = true;
-				}
-				break;
-			}
-			default:
-				break;
 		}
+		
 
 		allocation_size += col_data.GetAllocationSize() - prev_allocation_size;
 	}

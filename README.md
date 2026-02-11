@@ -1,41 +1,24 @@
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: light)" srcset="logo/DuckDB_Logo-horizontal.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="logo/DuckDB_Logo-horizontal-dark-mode.svg">
-    <img alt="DuckDB logo" src="logo/DuckDB_Logo-horizontal.svg" height="100">
-  </picture>
-</div>
-<br>
+### How to run Column Sketches?
+First, you need to compile the project.
 
-<p align="center">
-  <a href="https://github.com/duckdb/duckdb/actions"><img src="https://github.com/duckdb/duckdb/actions/workflows/Main.yml/badge.svg?branch=main" alt="Github Actions Badge"></a>
-  <a href="https://discord.gg/tcvwpjfnZx"><img src="https://shields.io/discord/909674491309850675" alt="discord" /></a>
-  <a href="https://github.com/duckdb/duckdb/releases/"><img src="https://img.shields.io/github/v/release/duckdb/duckdb?color=brightgreen&display_name=tag&logo=duckdb&logoColor=white" alt="Latest Release"></a>
-</p>
-
-## DuckDB
-DuckDB is a high-performance analytical database system. It is designed to be fast, reliable, portable, and easy to use. DuckDB provides a rich SQL dialect, with support far beyond basic SQL. DuckDB supports arbitrary and nested correlated subqueries, window functions, collations, complex types (arrays, structs), and more. For more information on using DuckDB, please refer to the [DuckDB documentation](https://duckdb.org/docs/).
-
-## Installation
-If you want to install and use DuckDB, please see [our website](https://www.duckdb.org) for installation and usage instructions.
-
-## Data Import
-For CSV files and Parquet files, data import is as simple as referencing the file in the FROM clause:
-
-```sql
-SELECT * FROM 'myfile.csv';
-SELECT * FROM 'myfile.parquet';
+```sh
+make release
 ```
 
-Refer to our [Data Import](https://duckdb.org/docs/data/overview) section for more information.
+Second, since column sketches currently do not support persistent storage, if you want to make column sketches effective, please create a new database file each time.
 
-## SQL Reference
-The [website](https://duckdb.org/docs/sql/introduction) contains a reference of functions and SQL constructs available in DuckDB.
+```duckdb
+set threads to 1;
+call dbgen(sf=10);
+```
 
-## Development
-For development, DuckDB requires [CMake](https://cmake.org), Python3 and a `C++11` compliant compiler. Run `make` in the root directory to compile the sources. For development, use `make debug` to build a non-optimized debug version. You should run `make unit` and `make allunit` to verify that your version works properly after making changes. To test performance, you can run `BUILD_BENCHMARK=1 BUILD_TPCH=1 make` and then perform several standard benchmarks from the root directory by executing `./build/release/benchmark/benchmark_runner`. The details of benchmarks are in our [Benchmark Guide](benchmark/README.md).
+When the database connection is not closed, at this point, executing the query uses the column sketches.
 
-Please also refer to our [Build Guide](https://duckdb.org/dev/building) and [Contribution Guide](CONTRIBUTING.md).
+```duckdb
+pragma tpch(6);
+```
 
-## Support
-See the [Support Options](https://duckdblabs.com/support/) page.
+Currently, only some columns of the lineitem table have undergone column sketches processing. For detailed make sketches, you can refer to src/storage/local_storage.cpp: void LocalStorage::Append(LocalAppendState &state, DataChunk &chunk). If you want to support other columns, you can make the modification.  
+
+The specific processing logic for the sketch is located in src/include/duckdb/storage/statistics/column_sketch.hpp.
+

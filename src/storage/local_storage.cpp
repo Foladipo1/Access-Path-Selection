@@ -362,9 +362,13 @@ void LocalStorage::Append(LocalAppendState &state, DataChunk &chunk) {
 	if (error.HasError()) {
 		error.Throw();
 	}
-
+	vector<int> cached_sketch_col_idxs;
+	auto info = storage->table_ref.get().GetDataTableInfo();
+	if (info->GetTableName() == "lineitem") {
+		cached_sketch_col_idxs = {4, 5, 6, 7, 10};
+	}
 	//! Append the chunk to the local storage
-	auto new_row_group = storage->row_groups->Append(chunk, state.append_state);
+	auto new_row_group = storage->row_groups->sketchAppend(chunk, state.append_state, cached_sketch_col_idxs);
 	//! Check if we should pre-emptively flush blocks to disk
 	if (new_row_group) {
 		storage->WriteNewRowGroup();

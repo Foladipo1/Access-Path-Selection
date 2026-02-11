@@ -382,6 +382,64 @@ bool RowGroupCollection::Append(DataChunk &chunk, TableAppendState &state) {
 	return new_row_group;
 }
 
+bool RowGroupCollection::sketchAppend(DataChunk &chunk, TableAppendState &state, vector<int> &sketch_col_idxs) {
+	D_ASSERT(chunk.ColumnCount() == types.size());
+	chunk.Verify();
+
+	bool new_row_group = false;
+	idx_t total_append_count = chunk.size();
+	idx_t remaining = chunk.size();
+	state.total_append_count += total_append_count;
+	while (true) {
+		auto current_row_group = state.row_group_append_state.row_group;
+		// check how much we can fit into the current row_group
+		idx_t append_count =
+		    MinValue<idx_t>(remaining, Storage::ROW_GROUP_SIZE - state.row_group_append_state.offset_in_row_group);
+		if (append_count > 0) {
+			auto previous_allocation_size = current_row_group->GetAllocationSize();
+			if (sketch_col_idxs.empty()) {
+				current_row_group->Append(state.row_group_append_state, chunk, append_count);
+			} else {
+				current_row_group->sketchAppend(state.row_group_append_state, chunk, append_count, sketch_col_idxs);
+			}
+			allocation_size += current_row_group->GetAllocationSize() - previous_allocation_size;
+			// merge the stats
+			auto stats_lock = stats.GetLock();
+			for (idx_t i = 0; i < types.size(); i++) {
+				current_row_group->MergeIntoStatistics(i, stats.GetStats(*stats_lock, i).Statistics());
+			}
+		}
+		remaining -= append_count;
+		if (remaining > 0) {
+			// we expect max 1 iteration of this loop (i.e. a single chunk should never overflow more than one
+			// row_group)
+			D_ASSERT(chunk.size() == remaining + append_count);
+			// slice the input chunk
+			if (remaining < chunk.size()) {
+				chunk.Slice(append_count, remaining);
+			}
+			// append a new row_group
+			new_row_group = true;
+			auto next_start = current_row_group->start + state.row_group_append_state.offset_in_row_group;
+
+			auto l = row_groups->Lock();
+			AppendRowGroup(l, next_start);
+			// set up the append state for this row_group
+			auto last_row_group = row_groups->GetLastSegment(l);
+			last_row_group->InitializeAppend(state.row_group_append_state);
+			continue;
+		} else {
+			break;
+		}
+	}
+	state.current_row += row_t(total_append_count);
+	auto stats_lock = stats.GetLock();
+	for (idx_t col_idx = 0; col_idx < types.size(); col_idx++) {
+		stats.GetStats(*stats_lock, col_idx).UpdateDistinctStatistics(chunk.data[col_idx], chunk.size());
+	}
+	return new_row_group;
+}
+
 void RowGroupCollection::FinalizeAppend(TransactionData transaction, TableAppendState &state) {
 	auto remaining = state.total_append_count;
 	auto row_group = state.start_row_group;

@@ -61,8 +61,8 @@ ColumnSketch<BaseType, CodeType>::ColumnSketch(const std::vector<BaseType>& base
     build_order_preserving_map();
     build_sketch_column();
 
-    std::cout << "Build sketches for array of size " << base_data_.size() << " using " << num_codes_ << 
-            " codes." << std::endl;
+    // std::cout << "Build sketches for array of size " << base_data_.size() << " using " << num_codes_ << 
+    //         " codes." << std::endl;
 }
 
 template<typename BaseType, typename CodeType>
@@ -410,7 +410,7 @@ idx_t ColumnSketch<BaseType, CodeType>::evaluate_greater_than_AVX512(BaseType x,
         for (; i + 64 <= n; i += 64) {
             __m512i data = _mm512_loadu_si512(reinterpret_cast<const void*>(&sketch_[i]));
             
-            __mmask64 gt_mask = _mm512_cmpge_epu8_mask(data, cmp);
+            __mmask64 gt_mask = _mm512_cmpgt_epu8_mask(data, cmp); 
             msel.bitmask.push_back(static_cast<uint64_t>(gt_mask));
             while (gt_mask != 0) {
                 uint32_t pos = i + __builtin_ctzll(gt_mask);
@@ -423,7 +423,7 @@ idx_t ColumnSketch<BaseType, CodeType>::evaluate_greater_than_AVX512(BaseType x,
         for (; i + 64 <= n; i += 64) {
             __m512i data = _mm512_loadu_si512(reinterpret_cast<const void*>(&sketch_[i]));
             
-            __mmask64 gt_mask = _mm512_cmpge_epu8_mask(data, cmp);
+            __mmask64 gt_mask = _mm512_cmpgt_epu8_mask(data, cmp);
             __mmask64 eq_mask = _mm512_cmpeq_epu8_mask(data, cmp);
             __mmask64 temp_mask = eq_mask;
             while (temp_mask != 0) {
