@@ -1,24 +1,42 @@
-### How to run Column Sketches?
-First, you need to compile the project.
+### About this project
+
+This project contains a framework for students to quickly configure and evaluate access path selection strategies in DuckDB, a vectorized push-based columnar DBMS. 
+
+The code repos includes a sophisticated implementation developed by the TAs, allowing students to benchmark it against native zone maps and bitmap indexing quickly.
+
+### Read the code
+
+Please read the following code snippets:
+
+- src/include/duckdb/storage/statistics/column_sketch.hpp contains the core Column Sketches implementation. Our implementation leverages AVX-512 acceleration and requires a modern Intel or AMD CPU with AVX-512 support. 
+
+- planner/filter/*_filter.cpp:CheckSketchStatistics() implements the logic for data skipping based on sketches of column data. Note that the neighboring CheckStatistics() function handles the equivalent logic for the native zone maps.
+
+- storage/statistics/numeric_stats.cpp:CheckSketchTemplated() defines how column sketches are evaluated against specific predicates. E.g., "A = x" and  "A <= x".
+
+### Run the code
+
+First, compile the project.
 
 ```sh
 make release
 ```
 
-Second, since column sketches currently do not support persistent storage, if you want to make column sketches effective, please create a new database file each time.
+Second, generate workloads and column sketches for columns involved in TPC-H Q6. This step takes a few minutes, (mainly) depending on your CPU HZ number.
 
 ```duckdb
 set threads to 1;
 call dbgen(sf=10);
 ```
 
-When the database connection is not closed, at this point, executing the query uses the column sketches.
+Run the TPC-H Q6 using column sketches.
 
 ```duckdb
 pragma tpch(6);
 ```
 
-Currently, only some columns of the lineitem table have undergone column sketches processing. For detailed make sketches, you can refer to src/storage/local_storage.cpp: void LocalStorage::Append(LocalAppendState &state, DataChunk &chunk). If you want to support other columns, you can make the modification.  
+Note that the above `dbgen` command generates column sketches for columns involved in TPC-H Q6 automatically. If you want to building sketches for other query columns, you can update src/storage/local_storage.cpp:LocalStorage::Append().
 
-The specific processing logic for the sketch is located in src/include/duckdb/storage/statistics/column_sketch.hpp.
+---
 
+Happy coding! If you have any questions, please feel free to contact the TAs.
