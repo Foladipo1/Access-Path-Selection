@@ -4,11 +4,11 @@ This project contains a framework for students to quickly configure and evaluate
 
 The code repos includes a sophisticated implementation developed by the TAs, allowing students to benchmark it against native zone maps and bitmap indexing quickly.
 
-### Read the code
+### Walk through the code
 
-Please read the following code snippets:
+Please read the following code snippets to see how the framework operates.
 
-- src/include/duckdb/storage/statistics/column_sketch.hpp contains the core Column Sketches implementation. Our implementation leverages AVX-512 acceleration and requires a modern Intel or AMD CPU with AVX-512 support. 
+- src/include/duckdb/storage/statistics/column_sketch.hpp contains the core Column Sketches implementation. Our implementation leverages AVX-512 acceleration and requires a modern Intel or AMD CPU with AVX-512 support.
 
 - planner/filter/*_filter.cpp:CheckSketchStatistics() implements the logic for data skipping based on sketches of column data. Note that the neighboring CheckStatistics() function handles the equivalent logic for the native zone maps.
 
@@ -19,7 +19,7 @@ Please read the following code snippets:
 First, compile the project.
 
 ```sh
-make release
+make release (or debug)
 ```
 
 Second, generate workloads and column sketches for columns involved in TPC-H Q6. This step takes a few minutes, (mainly) depending on your CPU HZ number.
