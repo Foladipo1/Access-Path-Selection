@@ -1,0 +1,110 @@
+==========================================
+Job started:  Thu Apr 23 20:13:20 EDT 2026
+Running on:   scc-h30
+CPU:          Intel(R) Xeon(R) Gold 6426Y
+Cores (job):  1 thread
+RAM total:    1.0Ti
+AVX-512:      32 logical cores with AVX-512
+==========================================
+============================================================
+CS561 TPC-H SF=3 Selectivity Experiment
+DuckDB: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/build/release/duckdb
+Data: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/lineitem_sf3.csv
+Rows: ~18M  |  Runs: 5 + 1 warmup  |  Threads: 1
+============================================================
+
+Pre-loading sketched table (lineitem)...
+  [WARN] Binder Error: Unrecognized option for CSV reader "types"
+Pre-loading baseline table (lineitem_base)...
+  [WARN] Binder Error: Unrecognized option for CSV reader "types"
+
+  Selectivity ~5%  |  Threshold: l_quantity < 4
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Selectivity ~10%  |  Threshold: l_quantity < 6
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Selectivity ~20%  |  Threshold: l_quantity < 11
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Selectivity ~40%  |  Threshold: l_quantity < 21
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Selectivity ~60%  |  Threshold: l_quantity < 31
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Selectivity ~80%  |  Threshold: l_quantity < 41
+  Sketch median:   0.0 ms
+  Baseline median: 0.0 ms
+
+  Saved: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/selectivity_results_tpch.csv
+
+>>> EXPERIMENT COMPLETE
+==========================================
+Job finished: Thu Apr 23 20:13:21 EDT 2026
+==========================================
+==========================================
+Job started:  Thu Apr 23 20:35:11 EDT 2026
+Running on:   scc-h32
+CPU:          INTEL(R) XEON(R) GOLD 6526Y
+AVX-512:      32 logical cores with AVX-512
+==========================================
+============================================================
+CS561 TPC-H SF=3 Selectivity Experiment
+Data: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/lineitem_sf3.csv
+Runs: 5 per threshold  |  Threads: 1
+============================================================
+  Running lineitem session (load + all thresholds)...
+  [WARN] stderr: Binder Error: Unrecognized option for CSV reader "types"
+  Running lineitem_base session (load + all thresholds)...
+  [WARN] stderr: Binder Error: Unrecognized option for CSV reader "types"
+
+  Results summary:
+  ~5%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~10%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~20%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~40%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~60%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~80%: Sketch median=0.0ms  Baseline median=0.0ms
+
+  Saved: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/selectivity_results_tpch.csv
+
+>>> EXPERIMENT COMPLETE
+==========================================
+Job finished: Thu Apr 23 20:35:12 EDT 2026
+==========================================
+==========================================
+Job started:  Thu Apr 23 21:01:46 EDT 2026
+Running on:   scc-h32
+CPU:          INTEL(R) XEON(R) GOLD 6526Y
+AVX-512:      32 logical cores with AVX-512
+==========================================
+============================================================
+CS561 TPC-H SF=3 Selectivity Experiment
+Data: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/lineitem_sf3.csv
+Runs: 5 per threshold  |  Threads: 1
+============================================================
+  Running lineitem session (load + all thresholds)...
+  [WARN] stderr: Binder Error: Unrecognized option for CSV reader "types"
+  Running lineitem_base session (load + all thresholds)...
+  [WARN] stderr: Binder Error: Unrecognized option for CSV reader "types"
+
+  Results summary:
+  ~5%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~10%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~20%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~40%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~60%: Sketch median=0.0ms  Baseline median=0.0ms
+  ~80%: Sketch median=0.0ms  Baseline median=0.0ms
+
+  Saved: /projectnb/cs561/students/foladipo/CS561-Access-Path-Selection/results/selectivity_results_tpch.csv
+
+>>> EXPERIMENT COMPLETE
+==========================================
+Job finished: Thu Apr 23 21:01:47 EDT 2026
+==========================================
